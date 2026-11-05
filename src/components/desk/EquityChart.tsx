@@ -14,6 +14,8 @@ interface Props {
     warranty?: { month: number; label: string } | null;
     window?: { start: number; end: number } | null;
   };
+  /** Shows a floating glass readout that follows the scrub handle. */
+  tooltip?: { vehicle: string; odometer: number } | null;
 }
 
 const W = 600;
@@ -23,7 +25,7 @@ const R = 12;
 const T = 12;
 const B = 26;
 
-export function EquityChart({ series, month, breakeven, onScrub, pinned, milestones }: Props) {
+export function EquityChart({ series, month, breakeven, onScrub, pinned, milestones, tooltip }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragging = useRef(false);
   const ownTerm = Math.max(1, series.length - 1);
@@ -52,7 +54,9 @@ export function EquityChart({ series, month, breakeven, onScrub, pinned, milesto
   const wc = milestones?.warranty && milestones.warranty.month <= ownTerm ? milestones.warranty : null;
   const wcRight = wc ? x(wc.month) > W - 110 : false;
 
+  const tipLeft = p ? (x(p.month) / W) * 100 : 0;
   return (
+    <div className="relative">
     <svg
       ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
@@ -87,8 +91,11 @@ export function EquityChart({ series, month, breakeven, onScrub, pinned, milesto
       ))}
       {years.map((m) => (
         <text key={m} x={x(m)} y={H - 6} textAnchor="middle" className="fill-muted-foreground num text-[11px]">
-          Y{m / 12}
+          M{m}
         </text>
+      ))}
+      {years.map((m) => (
+        <line key={`g${m}`} x1={x(m)} x2={x(m)} y1={T} y2={H - B} className="stroke-border" />
       ))}
 
       {win && (
@@ -136,5 +143,22 @@ export function EquityChart({ series, month, breakeven, onScrub, pinned, milesto
         </g>
       )}
     </svg>
+    {tooltip && p && (
+      <div
+        className="glass pointer-events-none absolute top-2 z-10 w-40 rounded-xl px-3 py-2 text-[11px] transition-[left] duration-75"
+        style={{ left: `clamp(0px, calc(${tipLeft}% ${tipLeft > 60 ? "- 10.5rem" : "+ 0.75rem"}), calc(100% - 10rem))` }}
+      >
+        <div className="truncate font-medium text-foreground">{tooltip.vehicle}</div>
+        <div className="num mt-1 flex justify-between text-muted-foreground">Month <span className="text-foreground">{p.month}</span></div>
+        <div className="num flex justify-between text-muted-foreground">
+          Equity
+          <span className={p.equity >= 0 ? "text-gain" : "text-loss"}>
+            {p.equity >= 0 ? "+" : "−"}${Math.abs(Math.round(p.equity)).toLocaleString("en-US")}
+          </span>
+        </div>
+        <div className="num flex justify-between text-muted-foreground">Odometer <span className="text-foreground">{tooltip.odometer.toLocaleString("en-US")}</span></div>
+      </div>
+    )}
+    </div>
   );
 }
