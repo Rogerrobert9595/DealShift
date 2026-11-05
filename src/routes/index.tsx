@@ -1443,3 +1443,100 @@ function LtvApprovalMeter({ ltv, onAddCash }: { ltv: LtvAssessment; onAddCash: (
     </div>
   );
 }
+
+function MeshKpi({ mesh, label, sub, value, valueClass, icon, badge, watermark, className }: {
+  mesh: "mesh-sage" | "mesh-mint" | "mesh-coral"; label: string; sub: string; value: string; valueClass?: string;
+  icon: ReactNode; badge: ReactNode; watermark?: boolean; className?: string;
+}) {
+  return (
+    <div className={cn("kpi-mesh flex min-h-40 flex-col rounded-2xl p-4", mesh, className)}>
+      {watermark && <span aria-hidden className="pointer-events-none absolute -bottom-6 -right-2 select-none text-8xl font-bold text-foreground/5">$</span>}
+      <div className="text-xs font-medium">{label}</div>
+      <div className="truncate text-[11px] text-muted-foreground">{sub}</div>
+      <div className={cn("num mt-3 text-4xl font-light tracking-tight", valueClass)}>
+        {value}<span className="text-sm text-muted-foreground">/mo</span>
+      </div>
+      <div className="mt-auto flex items-center justify-between pt-3">
+        <span className="flex h-8 items-center justify-center rounded-lg border border-border bg-foreground/5 px-2 backdrop-blur">{icon}</span>
+        {badge}
+      </div>
+    </div>
+  );
+}
+
+function RightWidgets(p: {
+  visibleClass: string; presenting: boolean; trueDelta: number; feelsLike: number; salesTax: number; financed: number;
+  taxRate: number; tradeTaxCredit: boolean; onTradeTaxCredit: (v: boolean) => void; onPresenting: (v: boolean) => void;
+  pinned: boolean; onPinned: (on: boolean) => void; onShare: () => void; onSave: () => void;
+  currMaint: number; onPill: (v: number) => void; recent: SavedDeal[] | null; onOpenDeal: (d: SavedDeal) => void; onAllDeals: () => void;
+}) {
+  const box = "rounded-2xl border border-border bg-card p-4";
+  const label = "text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
+  return (
+    <div className={cn("space-y-4", p.visibleClass)}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+        <section className={box}>
+          <div className={label}>Real cash flow</div>
+          <div className={cn("num mt-2 font-mono text-3xl", p.trueDelta >= 0 ? "text-gain" : "text-cost")}>
+            {p.trueDelta >= 0 ? "+" : "−"}{money(Math.abs(p.trueDelta))}<span className="text-sm">/mo</span>
+          </div>
+          <div className="num text-xs text-muted-foreground">{money(p.feelsLike)}/mo feels like</div>
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={p.onShare} className="h-9 flex-1 rounded-full bg-coral text-sm font-medium text-primary-foreground">Share Summary</button>
+            {!p.presenting && <button type="button" onClick={p.onSave} className="h-9 flex-1 rounded-full border border-border bg-background text-sm">Save Customer</button>}
+          </div>
+        </section>
+        <section className={cn(box, "space-y-2.5 text-sm")}>
+          <div className={label}>Deal switches</div>
+          <label className="flex items-center justify-between gap-2">Trade tax credit ({p.taxRate}%)<Switch checked={p.tradeTaxCredit} onCheckedChange={p.onTradeTaxCredit} /></label>
+          <label className="flex items-center justify-between gap-2">Customer View (Alt+C)<Switch checked={p.presenting} onCheckedChange={p.onPresenting} /></label>
+          <label className="flex items-center justify-between gap-2">Pin current deal<Switch checked={p.pinned} onCheckedChange={p.onPinned} /></label>
+          <div className="num flex justify-between border-t border-border pt-2 text-xs"><span className="text-muted-foreground">Sales tax</span>{money(p.salesTax)}</div>
+          <div className="num flex justify-between text-xs"><span className="text-muted-foreground">Amount financed</span>{money(p.financed)}</div>
+        </section>
+      </div>
+      <section className={box}>
+        <div className={label}>Service milestones</div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {SERVICE_PILLS.map((s) => (
+            <div key={s.id} className="group relative">
+              <button type="button" onClick={() => p.onPill(s.monthly)}
+                className={cn("rounded-full border px-3 py-1.5 text-xs", p.currMaint === s.monthly ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-accent")}>
+                {s.label.split(" ")[0]} <span className="num">{money(s.monthly)}</span>
+              </button>
+              <div className="glass pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-56 rounded-xl p-2.5 text-[11px] group-hover:block">
+                {s.parts.map((x) => <div key={x.k} className="flex justify-between gap-2"><span>{x.k}</span><span className="num">{money(x.v)}</span></div>)}
+              </div>
+            </div>
+          ))}
+        </div>
+        {p.recent && (
+          <>
+            <div className="mt-4 flex items-center justify-between"><div className={label}>Recent saved deals</div>
+              <button type="button" onClick={p.onAllDeals} className="text-xs text-primary">All</button></div>
+            <ul className="mt-2 space-y-1">
+              {p.recent.map((d) => {
+                const flow = d.deal && d.current ? simulate(d.deal, d.current, d.vehicle?.miles ?? 0).trueDelta : null;
+                return (
+                  <li key={d.id}>
+                    <button type="button" onClick={() => p.onOpenDeal(d)} className="flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left hover:bg-accent">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sage/40 to-coral/40 text-xs font-semibold">{d.customerName[0]}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm">{d.customerName}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {d.vehicle ? `${d.vehicle.year} ${d.vehicle.makeModel}` : "No unit"} · {new Date(d.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                      </span>
+                      {flow != null && flow >= 0 && <span className="num shrink-0 rounded-full bg-gain/15 px-2 py-0.5 text-[10px] font-semibold text-gain shadow-[0_0_10px_-2px_var(--gain)]">SAVES {money(flow)}/MO</span>}
+                    </button>
+                  </li>
+                );
+              })}
+              {!p.recent.length && <li className="text-xs text-muted-foreground">No saved customers yet.</li>}
+            </ul>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
