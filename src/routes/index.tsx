@@ -24,10 +24,13 @@ import {
   Wrench,
   Wallet,
   Users,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { CompareBars } from "@/components/desk/CompareBars";
+import { CommandSearch } from "@/components/desk/CommandSearch";
+import { IconRail, type RailItem } from "@/components/desk/IconRail";
 import { CurrentCarLookup } from "@/components/desk/CurrentCarLookup";
 import { EquityChart } from "@/components/desk/EquityChart";
 import { Field, money, num, NumInput, Panel, signedMoney, SliderField } from "@/components/desk/fields";
@@ -159,6 +162,7 @@ function DeskPage() {
   const [presenting, setPresenting] = useState(false);
   const [pinned, setPinned] = useState<{ term: number; cash: number; payment: number; breakeven: number | null; series: SimPoint[] } | null>(null);
   const [lookup, setLookup] = useState("");
+  const [rail, setRail] = useState<RailItem>("desk");
   const [zip, setZip] = useState("");
   const [zipInfo, setZipInfo] = useState<{ region: string; source: "live" | "regional"; loading?: boolean } | null>(null);
   const { user, signOut } = useAuth();
@@ -484,13 +488,28 @@ function DeskPage() {
   const quick = inventory.slice(0, 8);
 
   return (
-    <div className="min-h-dvh pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-10">
+    <div className="min-h-dvh bg-background pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-10 lg:pl-16">
+      <IconRail
+        active={rail}
+        presenting={presenting}
+        email={user?.email ?? null}
+        dealCount={user ? (savedDeals.data?.length ?? null) : null}
+        onTogglePresent={() => setPresenting((p) => !p)}
+        onAccount={() => (user ? setOverlay("deals") : askSignIn(null))}
+        onSelect={(i) => {
+          if (i === "share") return void shareSummary();
+          setRail(i);
+          if (i === "inventory" || i === "deals") setOverlay(i);
+          else if (i === "equity") document.getElementById("equity-bento")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          else window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 py-3">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+        <div className="mx-auto max-w-[1440px] px-4 py-3 lg:px-6">
           <div className="flex items-center gap-3">
-            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl" />
-            <div className="min-w-0 flex-1">
+            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl lg:hidden" />
+            <div className="min-w-0 flex-1 lg:w-56 lg:flex-none">
               <h1 className="truncate text-base font-semibold leading-tight">
                 {activeDeal && !presenting ? activeDeal.customerName : "Deal Desk"}
               </h1>
@@ -508,21 +527,27 @@ function DeskPage() {
                 </span>
               </p>
             </div>
+            <div className="hidden flex-1 lg:block">
+              <CommandSearch
+                inventory={inventory}
+                deals={user && !presenting ? (savedDeals.data ?? []) : []}
+                hideInternal={presenting}
+                onPickVehicle={(v) => {
+                  applyVehicle(v);
+                  toast.success(`Loaded #${v.stock}`);
+                }}
+                onPickDeal={loadSavedDeal}
+              />
+            </div>
             <Button
               variant="outline"
               size="sm"
-              className={cn("h-10 px-2.5", presenting && "border-gain/60 bg-gain/15 text-gain")}
+              className={cn("h-10 px-2.5 lg:hidden", presenting && "border-gain/60 bg-gain/15 text-gain")}
               onClick={() => setPresenting((p) => !p)}
               aria-pressed={presenting}
               aria-label={presenting ? "Customer View on — switch to Desk View (Alt+C)" : "Desk View — switch to Customer View (Alt+C)"}
-              title={presenting ? "Switch to Desk View (Alt+C)" : "Switch to Customer View (Alt+C)"}
             >
               {presenting ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              <span className="hidden sm:inline">{presenting ? "Customer View" : "Desk View"}</span>
-            </Button>
-            <Button variant="secondary" size="sm" className="h-10" onClick={() => void shareSummary()} aria-label="Share summary">
-              <Send className="h-4 w-4" />
-              <span className="hidden xl:inline">Share summary</span>
             </Button>
             {!presenting && (
               <>
@@ -537,64 +562,35 @@ function DeskPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="relative h-10"
+                  className="relative h-10 lg:hidden"
                   onClick={() => setOverlay("deals")}
                   aria-label={`My customers${savedDeals.data ? ` (${savedDeals.data.length})` : ""}`}
                 >
                   <Users className="h-4 w-4" />
-                  <span className="hidden md:inline">My Customers</span>
                   {user && savedDeals.data && (
-                    <span className="num absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground md:static md:h-5 md:px-1.5">
+                    <span className="num absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                       {savedDeals.data.length}
                     </span>
                   )}
                 </Button>
-                <Button variant="secondary" size="sm" className="hidden h-10 lg:inline-flex" onClick={() => setOverlay("inventory")}>
-                  <Warehouse className="h-4 w-4" />
-                  <span className="hidden xl:inline">Inventory</span>
-                </Button>
-                {user ? (
-                  <div className="hidden items-center gap-1 border-l border-border pl-2 lg:flex">
-                    <span className="max-w-44 truncate text-xs text-muted-foreground" title={user.email ?? undefined}>
-                      {user.email}
-                    </span>
-                    <Button variant="ghost" size="sm" className="h-10" onClick={() => void signOut()}>
-                      <LogOut className="h-4 w-4" /> Sign Out
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="ghost" size="sm" className="hidden h-10 lg:inline-flex" onClick={() => askSignIn(null)}>
-                    <LogIn className="h-4 w-4" /> Sign In
-                  </Button>
-                )}
               </>
             )}
           </div>
 
-          <form
-            className="mt-3 flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleLookup();
-            }}
-          >
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={lookup}
-                onChange={(e) => setLookup(e.target.value)}
-                placeholder="Stock # (e.g. 2-48134)"
-                enterKeyHint="go"
-                autoCapitalize="characters"
-                className="num h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-base outline-none placeholder:font-sans placeholder:text-muted-foreground focus:border-ring"
-              />
-            </div>
-            <Button type="submit" className="h-11 px-5" disabled={!lookup.trim()}>
-              Load
-            </Button>
-          </form>
+          <div className="mt-3 lg:hidden">
+            <CommandSearch
+              inventory={inventory}
+              deals={user && !presenting ? (savedDeals.data ?? []) : []}
+              hideInternal={presenting}
+              onPickVehicle={(v) => {
+                applyVehicle(v);
+                toast.success(`Loaded #${v.stock}`);
+              }}
+              onPickDeal={loadSavedDeal}
+            />
+          </div>
 
-          <div className={cn("no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4", presenting && "hidden")}>
+          <div className={cn("no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0", presenting && "hidden")}>
             {quick.map((v) => (
               <button
                 key={v.stock}
@@ -629,8 +625,8 @@ function DeskPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 pt-4 lg:grid-cols-12 lg:gap-6 lg:pt-6">
-        <div className={cn("space-y-4", presenting ? "lg:col-span-4" : "lg:col-span-5")}>
+      <main className="mx-auto grid max-w-[1440px] grid-cols-1 gap-4 px-4 pt-4 lg:grid-cols-12 lg:gap-5 lg:px-6 lg:pt-5">
+        <div className={cn("space-y-4", presenting ? "lg:col-span-4" : "lg:col-span-4")}>
           {/* Proposed vehicle */}
           <section className={cn(show("deal"), "overflow-hidden rounded-2xl border border-border bg-card")}>
             <div className="bg-gradient-to-br from-primary/15 via-transparent to-transparent p-4 sm:p-5">
@@ -946,32 +942,70 @@ function DeskPage() {
           </Panel>
         </div>
 
-        <div className={cn("space-y-4", presenting ? "lg:col-span-8" : "lg:col-span-7")}>
+        <div className="space-y-4 lg:col-span-8">
           {/* KPIs */}
           <div className={show("deal")}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Kpi
+            <MeshKpi
+              mesh="mesh-sage"
+              label="Loan Payment"
+              sub="Monthly"
+              value={money(sim.payment)}
               icon={<Wallet className="h-4 w-4" />}
-              label="Loan payment"
-              value={`${money(sim.payment)}/mo`}
-              sub={`${signedMoney(sim.paymentDelta)}/mo vs current payment`}
+              badge={<span className={cn("num rounded-full px-2 py-0.5 text-[11px] font-medium", sim.paymentDelta > 0 ? "bg-cost/15 text-cost" : "bg-gain/15 text-gain")}>{signedMoney(sim.paymentDelta)}/mo</span>}
             />
-            <Kpi
-              icon={<Fuel className="h-4 w-4" />}
-              label="Running costs"
-              value={`${sim.opSavings >= 0 ? "Saves" : "Adds"} ${money(Math.abs(sim.opSavings))}/mo`}
-              sub={`Gas ${sim.gasSave >= 0 ? "saves " : "+"}${money(Math.abs(sim.gasSave))} · Maint ${sim.maintSave >= 0 ? "saves " : "+"}${money(Math.abs(sim.maintSave))}`}
-              tone={sim.opSavings >= 0 ? "gain" : "cost"}
+            <MeshKpi
+              mesh="mesh-mint"
+              label="Running Costs"
+              sub={`Gas ${sim.gasSave >= 0 ? "−" : "+"}${money(Math.abs(sim.gasSave))} · Maint ${sim.maintSave >= 0 ? "−" : "+"}${money(Math.abs(sim.maintSave))}`}
+              value={`${sim.opSavings >= 0 ? "Saves" : "Adds"} ${money(Math.abs(sim.opSavings))}`}
+              valueClass={sim.opSavings >= 0 ? "text-mint" : "text-cost"}
+              icon={<span className="flex gap-1"><Fuel className="h-4 w-4" /><Wrench className="h-4 w-4" /></span>}
+              badge={<ArrowRight className="h-4 w-4 text-muted-foreground" />}
             />
-            <FeelsLikeKpi feelsLike={sim.feelsLike} trueDelta={sim.trueDelta} presenting={presenting} />
+            <MeshKpi
+              mesh="mesh-coral"
+              label="Feels Like Payment"
+              sub="After gas, repairs & insurance"
+              value={money(sim.feelsLike)}
+              valueClass="text-gain"
+              watermark
+              className={cn(presenting && "ring-2 ring-gain/70 ring-offset-2 ring-offset-background")}
+              icon={<LineChart className="h-4 w-4" />}
+              badge={<span className={cn("num rounded-full px-2 py-0.5 text-[11px] font-semibold", sim.trueDelta >= 0 ? "bg-gain/20 text-gain" : "bg-cost/15 text-cost")}>{sim.trueDelta >= 0 ? "Saves" : "Adds"} {money(Math.abs(sim.trueDelta))}/mo</span>}
+            />
           </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="space-y-4">
+          <section className={cn("timeline-grid rounded-2xl border border-border bg-card p-1", "lg:block", tab === "deal" ? "hidden" : "block")}>
+            <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Outflow & equity timeline</div>
+              <div className="flex rounded-full border border-border bg-background p-0.5 text-xs">
+                {([["Today", 1], ["Term", deal.term]] as const).map(([l, m]) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setScrub(m)}
+                    className={cn("rounded-full px-3 py-1", month === m ? "bg-accent text-foreground" : "text-muted-foreground")}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="num hidden grid-cols-6 px-3 pt-1 text-[10px] text-muted-foreground/70 sm:grid">
+              {[12, 24, 36, 48, 60, 72].map((m) => (
+                <span key={m}>Month {m}</span>
+              ))}
+            </div>
 
           {/* Compare */}
           <Panel
             title="Total monthly outflow"
             kicker="Side by side"
-            className={cn(show("costs"), presenting && "present-panel")}
+            className={cn("border-0 bg-transparent", presenting && "present-panel")}
             action={
               <Button variant="ghost" size="sm" className="h-9 text-primary" onClick={() => void shareSummary()}>
                 <Send className="h-4 w-4" /> Send
@@ -983,18 +1017,18 @@ function DeskPage() {
                 {
                   label: "Current car",
                   parts: [
-                    { k: "Payment", v: current.currPay, c: "bg-pay" },
-                    { k: "Gas", v: sim.currGas, c: "bg-fuel" },
-                    { k: "Repairs", v: current.currMaint, c: "bg-maint" },
+                    { k: "Payment", v: current.currPay, c: "bg-sage text-sage" },
+                    { k: "Gas", v: sim.currGas, c: "bg-cyan text-cyan" },
+                    { k: "Repairs", v: current.currMaint, c: "bg-coral text-coral" },
                   ],
                 },
                 {
                   label: `Stock #${selected.stock}`,
                   parts: [
-                    { k: "Payment", v: sim.payment, c: "bg-pay" },
-                    { k: "Gas", v: sim.propGas, c: "bg-fuel" },
-                    { k: "Repairs", v: deal.maint, c: "bg-maint" },
-                    { k: current.insDelta < 0 ? "Insurance" : "Insurance +", v: current.insDelta, c: "bg-ins" },
+                    { k: "Payment", v: sim.payment, c: "bg-sage text-sage" },
+                    { k: "Gas", v: sim.propGas, c: "bg-cyan text-cyan" },
+                    { k: "Repairs", v: deal.maint, c: "bg-coral text-coral" },
+                    { k: current.insDelta < 0 ? "Insurance" : "Insurance +", v: current.insDelta, c: "bg-amber text-amber" },
                   ],
                 },
               ]}
@@ -1007,10 +1041,11 @@ function DeskPage() {
           </Panel>
 
           {/* Equity */}
+          <div id="equity-bento" className="scroll-mt-40" />
           <Panel
             title="Equity crossover"
             kicker="Depreciation twin"
-            className={cn(show("equity"), presenting && "present-panel")}
+            className={cn("border-0 bg-transparent", presenting && "present-panel")}
             action={
               <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", sim.breakevenMonth != null ? "bg-gain/15 text-gain" : "bg-loss/15 text-loss")}>
                 {breakevenText}
@@ -1053,8 +1088,10 @@ function DeskPage() {
                     type="button"
                     onClick={() => setD("term")(o.term)}
                     className={cn(
-                      "rounded-lg border p-2 text-left transition-colors",
-                      deal.term === o.term ? "border-primary bg-primary/10" : "border-input bg-background/60 active:bg-accent",
+                      "relative rounded-lg border bg-background/90 px-3 py-2 text-left transition-colors before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full after:absolute after:inset-y-1.5 after:right-0 after:w-[3px] after:rounded-full",
+                      deal.term === o.term
+                        ? "border-primary/50 before:bg-primary after:bg-primary before:shadow-[0_0_8px_var(--primary)] after:shadow-[0_0_8px_var(--primary)]"
+                        : "border-border before:bg-cyan/50 after:bg-cyan/50 hover:bg-accent",
                     )}
                   >
                     <div className="num text-sm font-semibold">{o.term} mo</div>
@@ -1095,6 +1132,7 @@ function DeskPage() {
               onScrub={setScrub}
               pinned={pinned}
               milestones={milestones}
+              tooltip={{ vehicle: `#${selected.stock} ${selected.year} ${selected.makeModel}`, odometer: odo }}
             />
             <p className="mt-1 text-center text-[11px] text-muted-foreground">Drag across the chart, use the slider, or tap a milestone</p>
             <MilestoneChips m={milestones} onJump={setScrub} active={month} />
@@ -1114,6 +1152,7 @@ function DeskPage() {
               </div>
             </div>
           </Panel>
+          </section>
 
           {/* Script */}
           {!presenting && (
@@ -1149,6 +1188,32 @@ function DeskPage() {
             </div>
           </Panel>
           )}
+          </div>
+
+          <RightWidgets
+            visibleClass={show("equity")}
+            presenting={presenting}
+            trueDelta={sim.trueDelta}
+            feelsLike={sim.feelsLike}
+            salesTax={sim.salesTax}
+            financed={sim.financed}
+            taxRate={deal.taxRate}
+            tradeTaxCredit={deal.tradeTaxCredit}
+            onTradeTaxCredit={setD("tradeTaxCredit")}
+            onPresenting={setPresenting}
+            pinned={!!pinned}
+            onPinned={(on) =>
+              setPinned(on ? { term: deal.term, cash: deal.cash, payment: sim.payment, breakeven: sim.breakevenMonth, series: sim.series } : null)
+            }
+            onShare={() => void shareSummary()}
+            onSave={() => setOverlay("save")}
+            currMaint={current.currMaint}
+            onPill={setC("currMaint")}
+            recent={!presenting && user ? (savedDeals.data ?? []).slice(0, 4) : null}
+            onOpenDeal={loadSavedDeal}
+            onAllDeals={() => setOverlay("deals")}
+          />
+          </div>
         </div>
       </main>
 
