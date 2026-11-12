@@ -22,6 +22,8 @@ export interface D1Database {
 
 export interface CloudflareEnv {
   DB?: D1Database;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   [key: string]: unknown;
@@ -318,4 +320,43 @@ export async function requireSessionUser(): Promise<AuthUser> {
   const user = await getSessionUser();
   if (!user) throw new Error("Unauthorized: Please sign in.");
   return user;
+}
+
+export async function findOrCreateUserByEmail(rawEmail: string): Promise<{ user: AuthUser; token: string }> {
+  const email = rawEmail.trim().toLowerCase();
+  const db = await getD1();
+  const now = new Date().toISOString();
+
+  if (db) {
+    const existing = await db
+      .prepare("SELECT id, email FROM users WHERE LOWER(email) = ?1")
+      .bind(email)
+      .first<{ id: string; email: string }>();
+    if (existing) {
+      const token = await createSession(existing.id);
+      return { user: { id: existing.id, email: existing.email }, token };
+    }
+    const id = crypto.randomUUID();
+    // Unusable random password hash for OAuth-created accounts (can still set a password via Forgot Password)
+    const passwordHash = `oauth:google:${generateRandomToken(24)}`;
+    await db
+      .prepare("INSERT INTO users (id, email, password_hash, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)")
+      .bind(id, email, passwordHash, now, now)
+      .run();
+    const token = await createSession(id);
+    return { user: { id, email }, token };
+  }
+
+  const mem = getMemoryStore();
+  for (const u of mem.users.values()) {
+    if (u.email.toLowerCase() === email) {
+      const token = await createSession(u.id);
+      return { user: { id: u.id, email: u.email }, token };
+    }
+  }
+  const id = crypto.randomUUID();
+  const passwordHash = `oauth:google:${generateRandomToken(24)}`;
+  mem.users.set(id, { id, email, password_hash: passwordHash, created_at: now, updated_at: now });
+  const token = await createSession(id);
+  return { user: { id, email }, token };
 }

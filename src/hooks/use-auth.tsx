@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { getAuthSession, signOutSession, type AuthUser } from "@/lib/auth.functions";
 import { clearStoredSessionToken, getStoredSessionToken, saveStoredSessionToken } from "@/lib/auth-storage";
@@ -26,6 +27,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const urlToken = url.searchParams.get("session_token");
+      const oauthError = url.searchParams.get("oauth_error");
+      if (urlToken) {
+        saveStoredSessionToken(urlToken);
+        url.searchParams.delete("session_token");
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+      }
+      if (oauthError) {
+        toast.error(oauthError);
+        url.searchParams.delete("oauth_error");
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+      }
+    }
     const token = getStoredSessionToken();
     getAuthSession({ data: { token } })
       .then((res) => {

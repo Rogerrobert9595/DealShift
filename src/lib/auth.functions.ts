@@ -262,3 +262,53 @@ export const completePasswordReset = createServerFn({ method: "POST" })
     const token = await createSession(userId);
     return { user: { id: userId, email }, token, error: null };
   });
+
+export const getGoogleAuthConfig = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ clientId: string | null; oauthRedirectEnabled: boolean }> => {
+    const { getCloudflareEnv } = await import("./cloudflare.server");
+    const env = await getCloudflareEnv();
+    const clientId = typeof env.GOOGLE_CLIENT_ID === "string" && env.GOOGLE_CLIENT_ID.trim() ? env.GOOGLE_CLIENT_ID.trim() : null;
+    const hasSecret = typeof env.GOOGLE_CLIENT_SECRET === "string" && env.GOOGLE_CLIENT_SECRET.trim().length > 0;
+    return { clientId, oauthRedirectEnabled: Boolean(clientId && hasSecret) };
+  },
+);
+
+export const signInWithGoogleCredential = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        credential: z.string().min(10).max(8192),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }): Promise<{ user: AuthUser | null; token: string | null; error: string | null }> => {
+    const { getCloudflareEnv, findOrCreateUserByEmail } = await import("./cloudflare.server");
+    const env = await getCloudflareEnv();
+    const expectedClientId = typeof env.GOOGLE_CLIENT_ID === "string" ? env.GOOGLE_CLIENT_ID.trim() : "";
+
+    try {
+      const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(data.credential)}`);
+      if (!verifyRes.ok) {
+        return { user: null, token: null, error: "Invalid Google credential." };
+      }
+      const payload = (await verifyRes.json()) as {
+        aud?: string;
+        email?: string;
+        email_verified?: string | boolean;
+      };
+
+      if (expectedClientId && payload.aud !== expectedClientId) {
+        return { user: null, token: null, error: "Google token audience mismatch." };
+      }
+      const verified = payload.email_verified === true || payload.email_verified === "true";
+      if (!payload.email || !verified) {
+        return { user: null, token: null, error: "Google account email is not verified." };
+      }
+
+      const { user, token } = await findOrCreateUserByEmail(payload.email);
+      return { user, token, error: null };
+    } catch (err) {
+      console.error("[Auth] Google token verification error:", err);
+      return { user: null, token: null, error: "Could not verify Google sign-in." };
+    }
+  });
