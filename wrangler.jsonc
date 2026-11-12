@@ -10,5 +10,13 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dealshift-db",
+      "database_id": "9f1ca362-f884-4d50-a18f-6021f060adbb",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
