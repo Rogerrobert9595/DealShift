@@ -253,65 +253,6 @@ export function aaaMonthlyMaint(milesPerYear: number): number {
   return Math.round((milesPerYear * AAA_MAINT_CENTS_PER_MILE) / 100 / 12);
 }
 
-/** Typical manufacturer service milestones (no dollar amounts — work items only). */
-export const SERVICE_MILESTONES = [
-  { at: 30000, label: "30k service", items: "fluids, filters, brake inspection" },
-  { at: 60000, label: "60k service", items: "brakes, battery, transmission fluid, coolant" },
-  { at: 90000, label: "90k service", items: "timing belt (if equipped), spark plugs, hoses" },
-  { at: 100000, label: "100k service", items: "water pump, shocks/struts, suspension parts" },
-  { at: 150000, label: "150k mark", items: "higher odds of engine or transmission repairs" },
-] as const;
-
-/** The last milestone the car has reached and the next one ahead of it. */
-export function serviceWindow(odometer: number) {
-  const passed = [...SERVICE_MILESTONES].reverse().find((m) => odometer >= m.at) ?? null;
-  const next = SERVICE_MILESTONES.find((m) => odometer < m.at) ?? null;
-  return { passed, next };
-}
-
-/**
- * Quick-select "upcoming service" brackets for the customer's current car.
- * Monthly averages amortize the big-ticket items over ~2 years of ownership;
- * `parts` add up to `monthly`.
- */
-export const SERVICE_PILLS = [
-  {
-    id: "60k",
-    label: "60k Major Service",
-    monthly: 125,
-    note: "Includes amortized 60k major service, routine oil changes and brake/battery wear",
-    parts: [
-      { k: "60k service (plugs, trans & coolant fluid)", v: 60 },
-      { k: "Oil changes & filters", v: 35 },
-      { k: "Brake & battery wear", v: 30 },
-    ],
-  },
-  {
-    id: "75-90k",
-    label: "75k–90k Tires & Brakes",
-    monthly: 165,
-    note: "Includes amortized tires, brakes & scheduled fluid/belt service",
-    parts: [
-      { k: "Tires & alignment", v: 55 },
-      { k: "Brake pads & rotors", v: 45 },
-      { k: "Fluids, belts & hoses", v: 35 },
-      { k: "Oil changes & filters", v: 30 },
-    ],
-  },
-  {
-    id: "100k",
-    label: "100k+ Timing/Suspension",
-    monthly: 215,
-    note: "Includes amortized timing belt/water pump, shocks/struts, tires & brakes and fluid/belt service",
-    parts: [
-      { k: "Timing belt & water pump", v: 70 },
-      { k: "Shocks, struts & suspension", v: 65 },
-      { k: "Tires & brakes", v: 45 },
-      { k: "Fluids, belts & oil", v: 35 },
-    ],
-  },
-] as const;
-
 /** Factory coverage most brands use: bumper-to-bumper 3 yr/36k, powertrain 5 yr/60k. */
 export const WARRANTY = {
   basic: { months: 36, miles: 36000, label: "Bumper-to-bumper" },

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, ExternalLink, Loader2, ShieldAlert, Wrench } from "lucide-react";
+import { BadgeCheck, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
 
-import { AAA_MAINT_CENTS_PER_MILE, AAA_SOURCE_URL, aaaMonthlyMaint, serviceWindow } from "@/lib/deal-math";
+import { AAA_MAINT_CENTS_PER_MILE, AAA_SOURCE_URL, aaaMonthlyMaint } from "@/lib/deal-math";
 import { vehicleLookupCache } from "@/lib/lookup-cache";
 import { getSafetyRecords, type SafetyRecords } from "@/lib/vehicle.functions";
 
@@ -11,13 +11,13 @@ interface Props {
   make: string;
   model: string;
   vin: string | null;
-  odometer: number | null;
+  odometer?: number | null;
   milesPerYear: number;
   mpgSource: "epa" | "estimate" | null;
 }
 
 /** Third-party sources behind the current-car numbers, so they read as facts, not a pitch. */
-export function CarSources({ year, make, model, vin, odometer, milesPerYear, mpgSource }: Props) {
+export function CarSources({ year, make, model, vin, milesPerYear, mpgSource }: Props) {
   const [safety, setSafety] = useState<SafetyRecords | null>(null);
   const [loading, setLoading] = useState(false);
   const fetchSafety = useServerFn(getSafetyRecords);
@@ -42,32 +42,10 @@ export function CarSources({ year, make, model, vin, odometer, milesPerYear, mpg
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, make, model]);
 
-  const win = odometer != null ? serviceWindow(odometer) : null;
   const recallUrl = vin && vin.length === 17 ? `https://www.nhtsa.gov/recalls?vin=${vin}` : "https://www.nhtsa.gov/recalls";
 
   return (
     <div className="space-y-2 text-xs">
-      {win && (win.passed || win.next) && (
-        <div className="flex items-start gap-2 rounded-lg border border-border bg-background/50 p-2.5">
-          <Wrench className="mt-0.5 h-3.5 w-3.5 shrink-0 text-maint" />
-          <div className="min-w-0 space-y-0.5">
-            {win.passed && (
-              <div>
-                <span className="font-medium text-foreground">Past the {win.passed.label}:</span>{" "}
-                <span className="text-muted-foreground">{win.passed.items}</span>
-              </div>
-            )}
-            {win.next && (
-              <div>
-                <span className="font-medium text-foreground">Next up, {win.next.label}:</span>{" "}
-                <span className="text-muted-foreground">{win.next.items}</span>
-              </div>
-            )}
-            <div className="text-[11px] text-muted-foreground">Typical manufacturer service schedule</div>
-          </div>
-        </div>
-      )}
-
       {year && make && model && (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-background/50 p-2.5">
           {loading ? (

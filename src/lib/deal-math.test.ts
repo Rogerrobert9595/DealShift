@@ -9,7 +9,6 @@ import {
   monthlyFuelCost,
   monthlyPayment,
   odometerAt,
-  serviceWindow,
   simulate,
   tradeWindow,
   warrantyCliff,
@@ -95,12 +94,6 @@ describe("trade-in sales tax credit", () => {
 describe("maintenance sources", () => {
   it("applies the AAA 2025 new-car rate of 11.3¢ a mile", () => {
     expect(aaaMonthlyMaint(15330)).toBe(144);
-  });
-
-  it("finds the service milestones around the odometer", () => {
-    expect(serviceWindow(75000).passed?.at).toBe(60000);
-    expect(serviceWindow(75000).next?.at).toBe(90000);
-    expect(serviceWindow(175000).next).toBeNull();
   });
 });
 
@@ -217,14 +210,6 @@ describe("mileage-aware depreciation", () => {
     const light = simulate(deal, cur, 10000).breakevenMonth!;
     const heavy = simulate(deal, { ...cur, commute: 90 }, 10000).breakevenMonth!;
     expect(heavy).toBeGreaterThan(light);
-  });
-});
-
-describe("service milestone pills", () => {
-  it("sets $125, $165 and $215 a month, each backed by parts that add up", async () => {
-    const { SERVICE_PILLS } = await import("./deal-math");
-    expect(SERVICE_PILLS.map((p) => p.monthly)).toEqual([125, 165, 215]);
-    for (const p of SERVICE_PILLS) expect(p.parts.reduce((s, x) => s + x.v, 0)).toBe(p.monthly);
   });
 });
 

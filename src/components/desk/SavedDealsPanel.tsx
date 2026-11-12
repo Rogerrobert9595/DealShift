@@ -93,7 +93,7 @@ export function SavedDealsPanel({ open, onOpenChange, activeDeal, onLoad, onDele
         ) : !user ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
             <Users className="h-10 w-10 text-primary" />
-            <p className="text-sm text-muted-foreground">Sign in to save customers and deal structures and open them again on any phone.</p>
+            <p className="text-sm text-muted-foreground">Sign in to save customers and deal structures and open them again on any device.</p>
             <Button className="h-11 w-full max-w-xs" onClick={onSignIn}>
               <LogIn className="h-4 w-4" /> Sign in / Sign up
             </Button>

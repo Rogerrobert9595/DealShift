@@ -71,7 +71,7 @@ export function InventoryPanel({ open, onOpenChange, inventory, source, selected
       setJustSaved(true);
       toast.success(user ? "Saved to your account! Syncing inventory…" : "Saved! Syncing inventory…");
       if (user) {
-        saveAccountScriptUrl(user.id, link).catch(() => toast.error("Saved on this phone, but not to your account."));
+        saveAccountScriptUrl(user.id, link).catch(() => toast.error("Saved on this device, but not to your account."));
       }
     }
     setSyncing(true);
@@ -171,7 +171,7 @@ export function InventoryPanel({ open, onOpenChange, inventory, source, selected
             <p className="text-sm text-muted-foreground">
               The app loads your sheet from this link by itself every time it opens. The script must be deployed as a web app with
               <b className="text-foreground"> Execute as: Me</b> and <b className="text-foreground">Who has access: Anyone</b>. Paste a new link and tap
-              <b className="text-foreground"> Save URL</b> only if you made a brand-new deployment — this phone remembers it.
+              <b className="text-foreground"> Save URL</b> only if you made a brand-new deployment — this device remembers it.
             </p>
             <div className="flex gap-2">
               <Input

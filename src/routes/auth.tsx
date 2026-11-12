@@ -39,7 +39,7 @@ function AuthPage() {
         <h1 className="mt-4 text-2xl font-semibold">
           {mode === "forgot" ? "Reset your password" : mode === "signup" ? "Create your account" : "Sign in to DealShift"}
         </h1>
-        <p className="mb-6 mt-1 text-sm text-muted-foreground">Save customers and deals to your account and open them on any phone.</p>
+        <p className="mb-6 mt-1 text-sm text-muted-foreground">Save customers and deals to your account and open them on any device.</p>
         <AuthForm mode={mode} onModeChange={setMode} />
       </div>
     </div>

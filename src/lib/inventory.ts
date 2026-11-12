@@ -39,8 +39,21 @@ const toNum = (v: unknown) => {
   const n = parseFloat(String(v ?? "").replace(/[$,\s]/g, ""));
   return Number.isFinite(n) && n > 0 ? n : null;
 };
+const toMpg = (v: unknown) => {
+  const n = toNum(v);
+  return n !== null && n >= 5 && n <= 150 ? n : null;
+};
+const toMaint = (v: unknown) => {
+  const n = toNum(v);
+  return n !== null && n >= 10 && n <= 500 ? n : null;
+};
+const cleanLabel = (v: unknown) =>
+  String(v ?? "")
+    .trim()
+    .replace(/^[,\s]+|[,\s]+$/g, "")
+    .replace(/\s*,\s*,+/g, ", ");
 const toText = (v: unknown) => {
-  const t = String(v ?? "").trim();
+  const t = cleanLabel(v);
   return t ? t.slice(0, 80) : null;
 };
 const isYear = (v: unknown) => {
@@ -63,7 +76,7 @@ export function parsePastedRows(text: string): Vehicle[] {
     if (yearIdx < 1) continue;
     const s = yearIdx - 1;
     const stock = clean[s];
-    const model = clean[s + 2] ?? "";
+    const model = cleanLabel(clean[s + 2]);
     const price = toInt(clean[s + 5]) || 0;
     if (!stock || stock.toLowerCase() === "stock" || !model || price <= 0) continue;
     out.push({
@@ -71,14 +84,14 @@ export function parsePastedRows(text: string): Vehicle[] {
       loc: (s > 0 ? clean[s - 1] : "") || "LOT",
       year: toInt(clean[s + 1]),
       makeModel: model,
-      desc: clean[s + 3] ?? "",
+      desc: cleanLabel(clean[s + 3]),
       miles: toInt(clean[s + 4]) || 0,
       price,
       days: toInt(clean[s + 6]) || 0,
       stat: clean[s + 7] || "S",
       vin: clean[s + 8] ?? "",
-      epaMpg: toNum(clean[s + 10]),
-      estMaint: toNum(clean[s + 11]),
+      epaMpg: toMpg(clean[s + 10]),
+      estMaint: toMaint(clean[s + 11]),
       engine: toText(clean[s + 12]),
     });
   }
@@ -113,15 +126,15 @@ export function normalizeSheetJson(json: unknown): Vehicle[] {
       stock: String(u.stock ?? "").trim(),
       loc: String(u.loc ?? "LOT").trim() || "LOT",
       year: toInt(u.year),
-      makeModel: String(u.makeModel ?? u.model ?? "").trim(),
-      desc: String(u.desc ?? "").trim(),
+      makeModel: cleanLabel(u.makeModel ?? u.model),
+      desc: cleanLabel(u.desc),
       miles: toInt(u.miles) || 0,
       price: toInt(u.price) || 0,
       days: toInt(u.days) || 0,
       stat: String(u.stat ?? "S").trim(),
       vin: String(u.vin ?? "").trim(),
-      epaMpg: toNum(u.epaMpg),
-      estMaint: toNum(u.estMaint),
+      epaMpg: toMpg(u.epaMpg),
+      estMaint: toMaint(u.estMaint),
       engine: toText(u.engineSpec ?? u.engine),
     }))
     .filter((v) => v.stock && v.makeModel && !Number.isNaN(v.year) && v.price > 0);

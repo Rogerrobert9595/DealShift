@@ -88,6 +88,26 @@ describe("sheet engine spec", () => {
     const row = ["S", "2-48134", "2026", "Buick Encore GX", "AWD", "11,604", "$23,999", "39", "S", "KL4AMCSL0TB008832", "", "27", "58", "1.3L 3-Cyl (Gasoline)"].join("\t");
     expect(parsePastedRows(row)[0]?.engine).toBe("1.3L 3-Cyl (Gasoline)");
   });
+
+  it("rejects out-of-range MPG (like shifted odometer values) and strips trailing commas from makeModel/desc", () => {
+    const [v] = normalizeSheetJson({
+      vehicles: [
+        {
+          stock: "9-16469DR",
+          year: 2024,
+          makeModel: "Chevrolet Blazer,",
+          desc: "Turbo I-4 2.5L, ",
+          price: 27599,
+          epaMpg: 49808,
+          estMaint: 12000,
+        },
+      ],
+    });
+    expect(v?.makeModel).toBe("Chevrolet Blazer");
+    expect(v?.desc).toBe("Turbo I-4 2.5L");
+    expect(v?.epaMpg).toBeNull();
+    expect(v?.estMaint).toBeNull();
+  });
 });
 
 describe("lookup cache", () => {

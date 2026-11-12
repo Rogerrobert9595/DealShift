@@ -57,7 +57,6 @@ import {
   monthlyCashFlowDelta,
   odometerAt,
   quickDeal,
-  SERVICE_PILLS,
   simulate,
   type CurrentInputs,
   type DealInputs,
@@ -441,7 +440,6 @@ function DeskPage() {
     [selected.year, selected.miles, sim.annualMiles, sim.breakevenMonth, deal.term],
   );
   const depRatePct = Math.round(annualDepreciationRate(sim.annualMiles) * 1000) / 10;
-  const activePill = SERVICE_PILLS.find((p) => p.monthly === current.currMaint) ?? null;
 
   const copyText = async (text: string): Promise<boolean> => {
     try {
@@ -492,9 +490,9 @@ function DeskPage() {
       />
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
-        <div className="mx-auto max-w-[1440px] px-4 py-3 lg:px-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl lg:hidden" />
+        <div className="mx-auto max-w-[1440px] px-4 py-2 sm:py-3 lg:px-6">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="h-8 w-8 rounded-xl sm:h-9 sm:w-9 lg:hidden" />
             <div className="min-w-0 flex-1 lg:w-56 lg:flex-none">
               <h1 className="truncate text-base font-semibold leading-tight">
                 {activeDeal && !presenting ? activeDeal.customerName : "DealShift"}
@@ -583,13 +581,13 @@ function DeskPage() {
 
         {/* Always-visible numbers on phones */}
         <div className="grid grid-cols-2 border-t border-border lg:hidden">
-          <div className="px-4 py-2">
+          <div className="px-4 py-1.5">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Payment</div>
-            <div className="num text-lg font-bold">{money(sim.payment)}<span className="text-xs font-medium text-muted-foreground">/mo</span></div>
+            <div className="num text-base font-bold sm:text-lg">{money(sim.payment)}<span className="text-xs font-medium text-muted-foreground">/mo</span></div>
           </div>
-          <div className="border-l border-border px-4 py-2">
+          <div className="border-l border-border px-4 py-1.5">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Real cash flow</div>
-            <div className={cn("num text-lg font-bold", sim.trueDelta >= 0 ? "text-gain" : "text-cost")}>
+            <div className={cn("num text-base font-bold sm:text-lg", sim.trueDelta >= 0 ? "text-gain" : "text-cost")}>
               {sim.trueDelta >= 0 ? "Saves " : "Adds "}
               {money(Math.abs(sim.trueDelta))}
               <span className="text-xs font-medium text-muted-foreground">/mo</span>
@@ -610,7 +608,7 @@ function DeskPage() {
                 </div>
                 <span className="num shrink-0 rounded-md bg-primary px-2 py-1 text-xs font-bold text-primary-foreground">#{selected.stock}</span>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className={cn("mt-4 grid grid-cols-2 gap-2", !presenting && "sm:grid-cols-3")}>
                 <Chip icon={<Gauge className="h-3.5 w-3.5" />} label="Odometer" value={`${num(selected.miles)} mi`} />
                 <Chip
                   icon={<Fuel className="h-3.5 w-3.5" />}
@@ -663,7 +661,7 @@ function DeskPage() {
           </section>
 
           {/* Deal structure */}
-          <Panel title="Deal structure" kicker="Desk" className={show("deal")}>
+          <Panel title="Deal structure" kicker={presenting ? "Terms" : "Desk"} className={show("deal")}>
             <div className="space-y-6">
               <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs">
@@ -826,41 +824,10 @@ function DeskPage() {
                 <Field label="Current MPG">
                   <NumInput label="Current MPG" value={current.currMpg} onChange={setC("currMpg")} suffix="mpg" decimals={1} />
                 </Field>
-                <div className="col-span-2 space-y-2">
+                <div className="col-span-2">
                   <Field label="Current repairs">
                     <NumInput label="Current repairs per month" value={current.currMaint} onChange={setC("currMaint")} prefix="$" suffix="/mo" decimals={0} />
                   </Field>
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Upcoming service milestone</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SERVICE_PILLS.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        title={p.note}
-                        aria-pressed={activePill?.id === p.id}
-                        onClick={() => setC("currMaint")(p.monthly)}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                          activePill?.id === p.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background/60 text-muted-foreground active:bg-accent",
-                        )}
-                      >
-                        {p.label} <span className="num opacity-80">{money(p.monthly)}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {activePill && (
-                    <div role="note" className="rounded-lg border border-border bg-muted/60 p-2.5 text-xs">
-                      <div className="text-muted-foreground">{activePill.note}</div>
-                      <ul className="mt-1.5 space-y-0.5">
-                        {activePill.parts.map((x) => (
-                          <li key={x.k} className="flex justify-between gap-2">
-                            <span>{x.k}</span>
-                            <span className="num">{money(x.v)}/mo</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                 </div>
                 <Field label="ZIP code">
                   <div className="relative">
@@ -1014,7 +981,7 @@ function DeskPage() {
           </Panel>
 
           {/* Equity */}
-          <div id="equity-bento" className="scroll-mt-40" />
+          <div id="equity-bento" className="scroll-mt-48" />
           <Panel
             title="Equity crossover"
             kicker="Depreciation twin"
@@ -1082,7 +1049,8 @@ function DeskPage() {
                   {pinned.breakeven === 0 ? "equity from day one" : pinned.breakeven != null ? `equity at month ${pinned.breakeven}` : "upside down"}
                   {pinned.breakeven != null && sim.breakevenMonth != null && pinned.breakeven !== sim.breakevenMonth && (
                     <strong className={cn("ml-1", sim.breakevenMonth < pinned.breakeven ? "text-gain" : "text-loss")}>
-                      → now month {sim.breakevenMonth} ({Math.abs(pinned.breakeven - sim.breakevenMonth)} months{" "}
+                      → now month {sim.breakevenMonth} ({Math.abs(pinned.breakeven - sim.breakevenMonth)}{" "}
+                      {Math.abs(pinned.breakeven - sim.breakevenMonth) === 1 ? "month" : "months"}{" "}
                       {sim.breakevenMonth < pinned.breakeven ? "sooner" : "later"})
                     </strong>
                   )}
@@ -1093,7 +1061,8 @@ function DeskPage() {
                 moreDown.breakevenMonth < sim.breakevenMonth && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     With $1,000 more down: {money(moreDown.payment)}/mo and equity at month{" "}
-                    <strong className="text-gain">{moreDown.breakevenMonth}</strong> ({sim.breakevenMonth - moreDown.breakevenMonth} months sooner)
+                    <strong className="text-gain">{moreDown.breakevenMonth}</strong> ({sim.breakevenMonth - moreDown.breakevenMonth}{" "}
+                    {sim.breakevenMonth - moreDown.breakevenMonth === 1 ? "month" : "months"} sooner)
                   </p>
                 )
               )}
@@ -1180,8 +1149,6 @@ function DeskPage() {
             }
             onShare={() => void shareSummary()}
             onSave={() => setOverlay("save")}
-            currMaint={current.currMaint}
-            onPill={setC("currMaint")}
             recent={!presenting && user ? (savedDeals.data ?? []).slice(0, 4) : null}
             onOpenDeal={loadSavedDeal}
             onAllDeals={() => setOverlay("deals")}
@@ -1404,7 +1371,7 @@ function RightWidgets(p: {
   visibleClass: string; presenting: boolean; trueDelta: number; feelsLike: number; salesTax: number; financed: number;
   taxRate: number; tradeTaxCredit: boolean; onTradeTaxCredit: (v: boolean) => void; onPresenting: (v: boolean) => void;
   pinned: boolean; onPinned: (on: boolean) => void; onShare: () => void; onSave: () => void;
-  currMaint: number; onPill: (v: number) => void; recent: SavedDeal[] | null; onOpenDeal: (d: SavedDeal) => void; onAllDeals: () => void;
+  recent: SavedDeal[] | null; onOpenDeal: (d: SavedDeal) => void; onAllDeals: () => void;
 }) {
   const box = "rounded-2xl border border-border bg-card p-4";
   const label = "text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
@@ -1425,54 +1392,40 @@ function RightWidgets(p: {
         <section className={cn(box, "space-y-2.5 text-sm")}>
           <div className={label}>Deal switches</div>
           <label className="flex items-center justify-between gap-2">Trade tax credit ({p.taxRate}%)<Switch checked={p.tradeTaxCredit} onCheckedChange={p.onTradeTaxCredit} /></label>
-          <label className="flex items-center justify-between gap-2">Customer View (Alt+C)<Switch checked={p.presenting} onCheckedChange={p.onPresenting} /></label>
+          {!p.presenting && <label className="flex items-center justify-between gap-2">Customer View (Alt+C)<Switch checked={p.presenting} onCheckedChange={p.onPresenting} /></label>}
           <label className="flex items-center justify-between gap-2">Pin current deal<Switch checked={p.pinned} onCheckedChange={p.onPinned} /></label>
           <div className="num flex justify-between border-t border-border pt-2 text-xs"><span className="text-muted-foreground">Sales tax</span>{money(p.salesTax)}</div>
           <div className="num flex justify-between text-xs"><span className="text-muted-foreground">Amount financed</span>{money(p.financed)}</div>
         </section>
       </div>
-      <section className={box}>
-        <div className={label}>Service milestones</div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {SERVICE_PILLS.map((s) => (
-            <div key={s.id} className="group relative">
-              <button type="button" onClick={() => p.onPill(s.monthly)}
-                className={cn("rounded-full border px-3 py-1.5 text-xs", p.currMaint === s.monthly ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-accent")}>
-                {s.label.split(" ")[0]} <span className="num">{money(s.monthly)}</span>
-              </button>
-              <div className="glass pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-56 rounded-xl p-2.5 text-[11px] group-hover:block">
-                {s.parts.map((x) => <div key={x.k} className="flex justify-between gap-2"><span>{x.k}</span><span className="num">{money(x.v)}</span></div>)}
-              </div>
-            </div>
-          ))}
-        </div>
-        {p.recent && (
-          <>
-            <div className="mt-4 flex items-center justify-between"><div className={label}>Recent saved deals</div>
-              <button type="button" onClick={p.onAllDeals} className="text-xs text-primary">All</button></div>
-            <ul className="mt-2 space-y-1">
-              {p.recent.map((d) => {
-                const flow = d.deal && d.current ? monthlyCashFlowDelta(d.deal, d.current) : null;
-                return (
-                  <li key={d.id}>
-                    <button type="button" onClick={() => p.onOpenDeal(d)} className="flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left hover:bg-accent">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sage/40 to-coral/40 text-xs font-semibold">{d.customerName[0]}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm">{d.customerName}</span>
-                        <span className="block truncate text-[11px] text-muted-foreground">
-                          {d.vehicle ? `${d.vehicle.year} ${d.vehicle.makeModel}` : "No unit"} · {new Date(d.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
+      {p.recent && (
+        <section className={box}>
+          <div className="flex items-center justify-between">
+            <div className={label}>Recent saved deals</div>
+            <button type="button" onClick={p.onAllDeals} className="text-xs text-primary">All</button>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {p.recent.map((d) => {
+              const flow = d.deal && d.current ? monthlyCashFlowDelta(d.deal, d.current) : null;
+              return (
+                <li key={d.id}>
+                  <button type="button" onClick={() => p.onOpenDeal(d)} className="flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left hover:bg-accent">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sage/40 to-coral/40 text-xs font-semibold">{d.customerName[0]}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{d.customerName}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">
+                        {d.vehicle ? `${d.vehicle.year} ${d.vehicle.makeModel}` : "No unit"} · {new Date(d.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
-                      {flow != null && flow >= 0 && <span className="num shrink-0 rounded-full bg-gain/15 px-2 py-0.5 text-[10px] font-semibold text-gain shadow-[0_0_10px_-2px_var(--gain)]">SAVES {money(flow)}/MO</span>}
-                    </button>
-                  </li>
-                );
-              })}
-              {!p.recent.length && <li className="text-xs text-muted-foreground">No saved customers yet.</li>}
-            </ul>
-          </>
-        )}
-      </section>
+                    </span>
+                    {flow != null && flow >= 0 && <span className="num shrink-0 rounded-full bg-gain/15 px-2 py-0.5 text-[10px] font-semibold text-gain shadow-[0_0_10px_-2px_var(--gain)]">SAVES {money(flow)}/MO</span>}
+                  </button>
+                </li>
+              );
+            })}
+            {!p.recent.length && <li className="text-xs text-muted-foreground">No saved customers yet.</li>}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

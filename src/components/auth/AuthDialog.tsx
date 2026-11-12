@@ -25,7 +25,7 @@ export function AuthDialog({ open, onOpenChange, reason }: { open: boolean; onOp
           <DialogTitle>
             {mode === "forgot" ? "Reset your password" : mode === "signup" ? "Create your account" : "Sign in to DealShift"}
           </DialogTitle>
-          <DialogDescription>{reason ?? "Save customers and deals to your account and open them on any phone."}</DialogDescription>
+          <DialogDescription>{reason ?? "Save customers and deals to your account and open them on any device."}</DialogDescription>
         </DialogHeader>
         <AuthForm mode={mode} onModeChange={setMode} idPrefix="dlg" />
       </DialogContent>

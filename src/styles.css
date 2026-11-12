@@ -190,10 +190,10 @@
 
 /* Bento dashboard: frosted glass popovers / tooltips. */
 @utility glass {
-  background: color-mix(in oklch, var(--background) 72%, transparent);
-  backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid oklch(1 0 0 / 10%);
-  box-shadow: 0 20px 50px -20px oklch(0 0 0 / 70%);
+  background: color-mix(in oklch, var(--card) 94%, black);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid oklch(1 0 0 / 14%);
+  box-shadow: 0 24px 60px -16px oklch(0 0 0 / 85%);
 }
 
 /* Pastel frosted KPI meshes. */
