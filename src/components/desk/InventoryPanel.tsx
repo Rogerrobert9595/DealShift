@@ -97,10 +97,11 @@ export function InventoryPanel({ open, onOpenChange, inventory, source, selected
       toast.error("No vehicles found. Copy whole rows from the sheet, including Stock, Year, Model and Price.");
       return;
     }
+    const rowStocks = new Set(rows.map((r) => r.stock));
     const merged =
       mode === "replace"
         ? rows
-        : [...rows, ...inventory.filter((v) => !rows.some((r) => r.stock === v.stock))];
+        : [...rows, ...inventory.filter((v) => !rowStocks.has(v.stock))];
     onReplace(merged, mode === "replace" ? "Pasted rows" : source);
     setPaste("");
     toast.success(`${mode === "replace" ? "Loaded" : "Added"} ${rows.length} units`);

@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { BadgeCheck, ExternalLink, Loader2, ShieldAlert, Wrench } from "lucide-react";
 
 import { AAA_MAINT_CENTS_PER_MILE, AAA_SOURCE_URL, aaaMonthlyMaint, serviceWindow } from "@/lib/deal-math";
+import { vehicleLookupCache } from "@/lib/lookup-cache";
 import { getSafetyRecords, type SafetyRecords } from "@/lib/vehicle.functions";
 
 interface Props {
@@ -26,7 +27,12 @@ export function CarSources({ year, make, model, vin, odometer, milesPerYear, mpg
     let cancelled = false;
     setLoading(true);
     setSafety(null);
-    fetchSafety({ data: { year, make, model } })
+    vehicleLookupCache
+      .get(
+        `safety:${year}:${make}:${model}`,
+        () => fetchSafety({ data: { year, make, model } }),
+        (r) => !r.error,
+      )
       .then((r) => !cancelled && setSafety(r))
       .catch(() => !cancelled && setSafety({ recalls: 0, complaints: 0, topComplaints: [], error: "NHTSA didn't respond." }))
       .finally(() => !cancelled && setLoading(false));

@@ -46,18 +46,29 @@ export function CommandSearch({ inventory, deals, hideInternal, onPickVehicle, o
 
   const vehicles = useMemo(() => {
     const active = FILTERS.filter((f) => filters.has(f.id));
-    const groups = new Set(active.map((f) => f.group));
+    const groups = Array.from(new Set(active.map((f) => f.group)));
     const t = term.toLowerCase();
-    return inventory
-      .filter((v) => [...groups].every((g) => active.some((f) => f.group === g && f.test(v))))
-      .filter((v) => !t || `${v.stock} ${v.year} ${v.makeModel} ${v.desc} ${v.vin}`.toLowerCase().includes(t))
-      .slice(0, 8);
+    const out: Vehicle[] = [];
+    for (const v of inventory) {
+      if (groups.length && !groups.every((g) => active.some((f) => f.group === g && f.test(v)))) continue;
+      if (t && !`${v.stock} ${v.year} ${v.makeModel} ${v.desc} ${v.vin}`.toLowerCase().includes(t)) continue;
+      out.push(v);
+      if (out.length === 8) break;
+    }
+    return out;
   }, [inventory, filters, term]);
 
   const customers = useMemo(() => {
     const t = term.toLowerCase();
     if (!t) return deals.slice(0, 3);
-    return deals.filter((d) => `${d.customerName} ${d.customerPhone ?? ""} ${d.proposedStock ?? ""}`.toLowerCase().includes(t)).slice(0, 4);
+    const out: SavedDeal[] = [];
+    for (const d of deals) {
+      if (`${d.customerName} ${d.customerPhone ?? ""} ${d.proposedStock ?? ""}`.toLowerCase().includes(t)) {
+        out.push(d);
+        if (out.length === 4) break;
+      }
+    }
+    return out;
   }, [deals, term]);
 
   const close = () => {

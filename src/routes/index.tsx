@@ -7,8 +7,6 @@ import {
   Copy,
   Eye,
   EyeOff,
-  LogIn,
-  LogOut,
   Pin,
   PinOff,
   Send,
@@ -17,7 +15,6 @@ import {
   LineChart,
   Loader2,
   MapPin,
-  Search,
   Share2,
   Car,
   Warehouse,
@@ -57,6 +54,8 @@ import {
   fallbackMsrp,
   lookupZipRates,
   makeFromModel,
+  monthlyCashFlowDelta,
+  odometerAt,
   quickDeal,
   SERVICE_PILLS,
   simulate,
@@ -65,7 +64,7 @@ import {
   type LtvAssessment,
   type SimPoint,
 } from "@/lib/deal-math";
-import { findByStock, isVin, SAMPLE_INVENTORY, type Vehicle } from "@/lib/inventory";
+import { isVin, SAMPLE_INVENTORY, type Vehicle } from "@/lib/inventory";
 import { vehicleLookupCache } from "@/lib/lookup-cache";
 import { encodeSummary } from "@/lib/summary-link";
 import { cn } from "@/lib/utils";
@@ -74,13 +73,13 @@ import { lookupLocalRates, lookupVehicleSpecs } from "@/lib/vehicle.functions";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Deal Desk – Ownership & Equity Twin" },
+      { title: "DealShift – Ownership & Equity Twin" },
       {
         name: "description",
         content:
           "Phone-ready dealership desk: compare a customer's current car with any stock unit — payment, fuel, maintenance and equity crossover.",
       },
-      { property: "og:title", content: "Deal Desk – Ownership & Equity Twin" },
+      { property: "og:title", content: "DealShift – Ownership & Equity Twin" },
       {
         property: "og:description",
         content: "Show customers their real monthly cash flow and when they'll have positive trade equity.",
@@ -161,11 +160,10 @@ function DeskPage() {
   const [spec, setSpec] = useState<SpecState>(IDLE_SPEC);
   const [presenting, setPresenting] = useState(false);
   const [pinned, setPinned] = useState<{ term: number; cash: number; payment: number; breakeven: number | null; series: SimPoint[] } | null>(null);
-  const [lookup, setLookup] = useState("");
   const [rail, setRail] = useState<RailItem>("desk");
   const [zip, setZip] = useState("");
   const [zipInfo, setZipInfo] = useState<{ region: string; source: "live" | "regional"; loading?: boolean } | null>(null);
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const savedDeals = useSavedDeals();
   const vinReq = useRef(0);
   const zipReq = useRef(0);
@@ -379,18 +377,6 @@ function DeskPage() {
     current,
   });
 
-  const handleLookup = () => {
-    const v = findByStock(inventory, lookup);
-    if (!v) {
-      toast.error(`Stock #${lookup.trim()} isn't in the loaded inventory`);
-      return;
-    }
-    applyVehicle(v);
-    setLookup("");
-    (document.activeElement as HTMLElement | null)?.blur();
-    toast.success(`Loaded #${v.stock}`);
-  };
-
   const sim = useMemo(() => simulate(deal, current, selected.miles), [deal, current, selected.miles]);
   const bookValue = useMemo(
     () =>
@@ -407,7 +393,7 @@ function DeskPage() {
   const ltv = useMemo(() => evaluateLtv(sim.financed, bookValue.tradeInClean), [sim.financed, bookValue.tradeInClean]);
   const month = Math.min(Math.max(1, scrub), deal.term);
   const point = sim.series[month] ?? sim.series[sim.series.length - 1]!;
-  const odo = Math.round(selected.miles + (sim.annualMiles * month) / 12);
+  const odo = odometerAt(selected.miles, sim.annualMiles, month);
   const title = `${selected.year} ${selected.makeModel} ${selected.desc}`.trim();
   const specBadge = spec.mpg != null && deal.mpg === spec.mpg && (spec.status === "epa" || spec.status === "estimate") ? spec.status : null;
 
@@ -507,11 +493,11 @@ function DeskPage() {
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
         <div className="mx-auto max-w-[1440px] px-4 py-3 lg:px-6">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <img src="/icons/icon-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl lg:hidden" />
             <div className="min-w-0 flex-1 lg:w-56 lg:flex-none">
               <h1 className="truncate text-base font-semibold leading-tight">
-                {activeDeal && !presenting ? activeDeal.customerName : "Deal Desk"}
+                {activeDeal && !presenting ? activeDeal.customerName : "DealShift"}
               </h1>
               <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                 {sheet.status === "syncing" && <Loader2 className="h-3 w-3 shrink-0 animate-spin" />}
@@ -527,7 +513,7 @@ function DeskPage() {
                 </span>
               </p>
             </div>
-            <div className="hidden flex-1 lg:block">
+            <div className="order-last w-full lg:order-none lg:w-auto lg:flex-1">
               <CommandSearch
                 inventory={inventory}
                 deals={user && !presenting ? (savedDeals.data ?? []) : []}
@@ -577,19 +563,6 @@ function DeskPage() {
             )}
           </div>
 
-          <div className="mt-3 lg:hidden">
-            <CommandSearch
-              inventory={inventory}
-              deals={user && !presenting ? (savedDeals.data ?? []) : []}
-              hideInternal={presenting}
-              onPickVehicle={(v) => {
-                applyVehicle(v);
-                toast.success(`Loaded #${v.stock}`);
-              }}
-              onPickDeal={loadSavedDeal}
-            />
-          </div>
-
           <div className={cn("no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0", presenting && "hidden")}>
             {quick.map((v) => (
               <button
@@ -626,7 +599,7 @@ function DeskPage() {
       </header>
 
       <main className="mx-auto grid max-w-[1440px] grid-cols-1 gap-4 px-4 pt-4 lg:grid-cols-12 lg:gap-5 lg:px-6 lg:pt-5">
-        <div className={cn("space-y-4", presenting ? "lg:col-span-4" : "lg:col-span-4")}>
+        <div className="space-y-4 lg:col-span-4">
           {/* Proposed vehicle */}
           <section className={cn(show("deal"), "overflow-hidden rounded-2xl border border-border bg-card")}>
             <div className="bg-gradient-to-br from-primary/15 via-transparent to-transparent p-4 sm:p-5">
@@ -1244,7 +1217,7 @@ function DeskPage() {
         onNewCustomer={() => {
           setActiveDeal(null);
           setTradeCar(null);
-          setCurrent(DEFAULT_CURRENT);
+          setCurrent((c) => ({ ...DEFAULT_CURRENT, gasPrice: zip.length === 5 ? c.gasPrice : DEFAULT_CURRENT.gasPrice }));
           setLookupKey((k) => k + 1);
           toast("Next save creates a new customer");
         }}
@@ -1284,43 +1257,6 @@ function Chip({ icon, label, value, sub, badge }: { icon: ReactNode; label: stri
       {badge && <div className="mt-1">{badge}</div>}
       <div className="num mt-1 truncate text-sm font-semibold">{value}</div>
       {sub && <div className="truncate text-[11px] text-muted-foreground">{sub}</div>}
-    </div>
-  );
-}
-
-function Kpi({ icon, label, value, sub, tone, highlight }: { icon: ReactNode; label: string; value: string; sub: string; tone?: "gain" | "cost"; highlight?: boolean }) {
-  return (
-    <div className={cn("rounded-2xl border p-4", highlight ? "border-primary/40 bg-primary/10" : "border-border bg-card")}>
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className={cn("num mt-2 text-2xl font-bold", tone === "gain" && "text-gain", tone === "cost" && "text-cost")}>{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{sub}</div>
-    </div>
-  );
-}
-
-function FeelsLikeKpi({ feelsLike, trueDelta, presenting }: { feelsLike: number; trueDelta: number; presenting?: boolean }) {
-  const saves = trueDelta >= 0;
-  return (
-    <div className={cn("kpi-hero relative rounded-2xl p-4", presenting && "ring-2 ring-gain/70 ring-offset-2 ring-offset-background")}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-gain/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gain shadow-[0_0_14px_-2px_var(--gain)]">
-          <LineChart className="h-3.5 w-3.5" />
-          Feels like
-        </span>
-      </div>
-      <div className="num mt-2 text-3xl font-extrabold text-gain">
-        {money(feelsLike)}
-        <span className="text-base font-semibold">/mo</span>
-      </div>
-      <div className="mt-1 text-xs text-muted-foreground">
-        Real cash flow{" "}
-        <strong className={cn("num", saves ? "text-gain" : "text-cost")}>
-          {saves ? "saves" : "adds"} {money(Math.abs(trueDelta))}/mo
-        </strong>
-      </div>
     </div>
   );
 }
@@ -1516,7 +1452,7 @@ function RightWidgets(p: {
               <button type="button" onClick={p.onAllDeals} className="text-xs text-primary">All</button></div>
             <ul className="mt-2 space-y-1">
               {p.recent.map((d) => {
-                const flow = d.deal && d.current ? simulate(d.deal, d.current, d.vehicle?.miles ?? 0).trueDelta : null;
+                const flow = d.deal && d.current ? monthlyCashFlowDelta(d.deal, d.current) : null;
                 return (
                   <li key={d.id}>
                     <button type="button" onClick={() => p.onOpenDeal(d)} className="flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left hover:bg-accent">

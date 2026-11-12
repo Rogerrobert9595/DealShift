@@ -176,15 +176,6 @@
   }
 }
 
-/* Hero KPI: emerald gradient border + soft glow so "Feels like" is the first number the eye lands on. */
-@utility kpi-hero {
-  border: 1.5px solid transparent;
-  background:
-    linear-gradient(160deg, color-mix(in oklch, var(--gain) 14%, var(--card)), var(--card)) padding-box,
-    linear-gradient(135deg, var(--gain), color-mix(in oklch, var(--gain) 25%, transparent) 55%, var(--gain)) border-box;
-  box-shadow: 0 0 28px -6px color-mix(in oklch, var(--gain) 45%, transparent);
-}
-
 /* Customer View: bigger, emerald-edged outflow + equity panels for tablets/monitors. */
 @utility present-panel {
   border-color: color-mix(in oklch, var(--gain) 45%, var(--border));
@@ -229,16 +220,4 @@
 /* Faint vertical month columns behind the center bento. */
 @utility timeline-grid {
   background-image: repeating-linear-gradient(90deg, oklch(1 0 0 / 4%) 0 1px, transparent 1px calc(100% / 6));
-}
-
-/* Hide the injected "Edit with Lovable" badge. */
-#lovable-badge,
-[id^="lovable-badge"],
-[class*="lovable-badge"],
-a[href*="utm_source=lovable-badge"],
-lovable-badge {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
 }

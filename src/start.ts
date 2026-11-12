@@ -1,7 +1,14 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 
+import { getStoredSessionToken } from "./lib/auth-storage";
 import { renderErrorPage } from "./lib/error-page";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+
+const attachCloudflareAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
+  const token = getStoredSessionToken();
+  return next({
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+});
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
@@ -26,6 +33,6 @@ const csrfMiddleware = createCsrfMiddleware({
 });
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth],
+  functionMiddleware: [attachCloudflareAuth],
   requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));

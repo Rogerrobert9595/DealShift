@@ -15,7 +15,7 @@ export const Route = createFileRoute("/summary")({
   validateSearch: (s: Record<string, unknown>) => ({ d: typeof s["d"] === "string" ? s["d"] : "" }),
   head: () => ({
     meta: [
-      { title: "Your Deal Summary – Deal Desk" },
+      { title: "Your Deal Summary – DealShift" },
       { name: "description", content: "A read-only summary of your monthly costs, payment and equity timeline for the vehicle you looked at." },
       { property: "og:title", content: "Your Deal Summary" },
       { property: "og:description", content: "Your monthly outflow, what the payment really feels like, and when you build equity." },
@@ -39,7 +39,7 @@ function SummaryPage() {
           <h1 className="text-xl font-semibold">This summary link is incomplete</h1>
           <p className="mt-2 text-sm text-muted-foreground">Ask your salesperson to send it again.</p>
           <Link to="/" className="mt-6 inline-block text-sm text-primary underline">
-            Open Deal Desk
+            Open DealShift
           </Link>
         </div>
       </div>

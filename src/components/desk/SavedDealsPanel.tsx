@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
 import { useSavedDeals } from "@/hooks/use-saved-deals";
-import { simulate } from "@/lib/deal-math";
+import { monthlyCashFlowDelta } from "@/lib/deal-math";
 import { deleteDeal, type SavedDeal } from "@/lib/saved-deals";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ interface Props {
 /** Monthly cash-flow difference for a saved deal (positive = customer keeps more). */
 function cashFlow(d: SavedDeal): number | null {
   if (!d.deal || !d.current) return null;
-  return simulate(d.deal, d.current, d.vehicle?.miles ?? 0).trueDelta;
+  return monthlyCashFlowDelta(d.deal, d.current);
 }
 
 /** "My Customers" slide-out: every saved customer, tap to load onto the desk. */

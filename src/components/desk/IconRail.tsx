@@ -38,12 +38,12 @@ function RailBtn({ label, active, onClick, children, badge }: { label: string; a
 export function IconRail({ active, presenting, email, dealCount, onSelect, onTogglePresent, onAccount }: Props) {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-border bg-sidebar py-4 lg:flex">
-      <button type="button" className="group relative mb-6" onClick={() => onSelect("desk")} aria-label="Deal Desk home">
+      <button type="button" className="group relative mb-6" onClick={() => onSelect("desk")} aria-label="DealShift home">
         <img src="/icons/icon-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl" />
         <ChevronRight className="absolute -right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
       </button>
       <nav className="flex flex-1 flex-col items-center gap-2" aria-label="Sections">
-        <RailBtn label="Deal Desk" active={active === "desk"} onClick={() => onSelect("desk")}>
+        <RailBtn label="DealShift" active={active === "desk"} onClick={() => onSelect("desk")}>
           <LayoutGrid className="h-5 w-5" />
         </RailBtn>
         {!presenting && (

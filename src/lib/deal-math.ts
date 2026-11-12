@@ -43,11 +43,16 @@ export function monthlyPayment(principal: number, aprPct: number, term: number):
   return (principal * r) / (1 - Math.pow(1 + r, -term));
 }
 
-export function loanBalance(principal: number, aprPct: number, term: number, month: number): number {
+export function loanBalance(
+  principal: number,
+  aprPct: number,
+  term: number,
+  month: number,
+  pmt = monthlyPayment(principal, aprPct, term),
+): number {
   if (principal <= 0) return 0;
   if (month >= term) return 0;
   const r = aprPct / 1200;
-  const pmt = monthlyPayment(principal, aprPct, term);
   if (r === 0) return Math.max(0, principal - pmt * month);
   const g = Math.pow(1 + r, month);
   return Math.max(0, principal * g - (pmt * (g - 1)) / r);
@@ -80,8 +85,13 @@ export function annualDepreciationRate(milesPerYear: number): number {
  * Wholesale/trade value estimate: ~8% retail-to-trade gap at drive-off,
  * then the mileage-aware yearly decay above. Never below 10% of price.
  */
-export function vehicleValue(price: number, month: number, milesPerYear: number): number {
-  const curve = price * 0.92 * Math.pow(1 - annualDepreciationRate(milesPerYear), month / 12);
+export function vehicleValue(
+  price: number,
+  month: number,
+  milesPerYear: number,
+  depRate = annualDepreciationRate(milesPerYear),
+): number {
+  const curve = price * 0.92 * Math.pow(1 - depRate, month / 12);
   return Math.max(price * 0.1, curve);
 }
 
@@ -92,11 +102,12 @@ export interface SimPoint {
   equity: number;
 }
 
-export function simulate(deal: DealInputs, current: CurrentInputs, startMiles: number) {
+export function simulate(deal: DealInputs, current: CurrentInputs, _startMiles = 0) {
   const tax = dealTax(deal);
   const financed = tax.financed;
   const payment = monthlyPayment(financed, deal.apr, deal.term);
   const miles = annualMiles(current.commute);
+  const depRate = annualDepreciationRate(miles);
 
   const currGas = monthlyFuelCost(miles, current.currMpg, current.gasPrice);
   const propGas = monthlyFuelCost(miles, deal.mpg, current.gasPrice);
@@ -112,8 +123,8 @@ export function simulate(deal: DealInputs, current: CurrentInputs, startMiles: n
   const series: SimPoint[] = [];
   let breakevenMonth: number | null = null;
   for (let m = 0; m <= deal.term; m++) {
-    const value = vehicleValue(deal.price, m, miles);
-    const balance = loanBalance(financed, deal.apr, deal.term, m);
+    const value = vehicleValue(deal.price, m, miles, depRate);
+    const balance = loanBalance(financed, deal.apr, deal.term, m, payment);
     const equity = value - balance;
     if (breakevenMonth === null && equity >= 0) breakevenMonth = m;
     series.push({ month: m, value, balance, equity });
@@ -144,6 +155,21 @@ export function simulate(deal: DealInputs, current: CurrentInputs, startMiles: n
 export type Simulation = ReturnType<typeof simulate>;
 
 /**
+ * Monthly cash-flow difference (`currentTotal - proposedTotal`) without building
+ * the month-by-month equity series. Positive means the customer keeps more cash.
+ */
+export function monthlyCashFlowDelta(deal: DealInputs, current: CurrentInputs): number {
+  const { financed } = dealTax(deal);
+  const payment = monthlyPayment(financed, deal.apr, deal.term);
+  const miles = annualMiles(current.commute);
+  const currGas = monthlyFuelCost(miles, current.currMpg, current.gasPrice);
+  const propGas = monthlyFuelCost(miles, deal.mpg, current.gasPrice);
+  const currentTotal = current.currPay + currGas + current.currMaint;
+  const proposedTotal = payment + propGas + deal.maint + current.insDelta;
+  return currentTotal - proposedTotal;
+}
+
+/**
  * Just the payment and first positive-equity month for a deal — same numbers as
  * `simulate`, without building the month-by-month series. Used for the term
  * comparison cards and the "$1,000 more down" hint, which run on every drag.
@@ -154,8 +180,9 @@ export function quickDeal(
 ): { payment: number; breakevenMonth: number | null } {
   const financed = dealTax(deal).financed;
   const payment = monthlyPayment(financed, deal.apr, deal.term);
+  const depRate = annualDepreciationRate(milesPerYear);
   for (let m = 0; m <= deal.term; m++) {
-    if (vehicleValue(deal.price, m, milesPerYear) - loanBalance(financed, deal.apr, deal.term, m) >= 0) {
+    if (vehicleValue(deal.price, m, milesPerYear, depRate) - loanBalance(financed, deal.apr, deal.term, m, payment) >= 0) {
       return { payment, breakevenMonth: m };
     }
   }

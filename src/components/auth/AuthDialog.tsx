@@ -23,7 +23,7 @@ export function AuthDialog({ open, onOpenChange, reason }: { open: boolean; onOp
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-sm">
         <DialogHeader className="text-left">
           <DialogTitle>
-            {mode === "forgot" ? "Reset your password" : mode === "signup" ? "Create your account" : "Sign in to Deal Desk"}
+            {mode === "forgot" ? "Reset your password" : mode === "signup" ? "Create your account" : "Sign in to DealShift"}
           </DialogTitle>
           <DialogDescription>{reason ?? "Save customers and deals to your account and open them on any phone."}</DialogDescription>
         </DialogHeader>

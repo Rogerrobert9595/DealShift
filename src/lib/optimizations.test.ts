@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { quickDeal, simulate, type CurrentInputs, type DealInputs } from "./deal-math";
-import { isVin, normalizeSheetJson, parsePastedRows, VIN_RE } from "./inventory";
+import { hashPassword, verifyPassword } from "./cloudflare.server";
+import { monthlyCashFlowDelta, quickDeal, simulate, type CurrentInputs, type DealInputs } from "./deal-math";
+import { isVin, normalizeSheetJson, parsePastedRows, VIN_RE, SAMPLE_INVENTORY } from "./inventory";
 import { createLookupCache } from "./lookup-cache";
+import { buildDealRow, parseDealRow } from "./saved-deals";
 
 const deal: DealInputs = {
   price: 23999,
@@ -40,6 +42,11 @@ describe("quickDeal (term cards / $1,000 more down)", () => {
     const full = simulate(upside, { ...current, commute: 110 }, 0);
     expect(full.breakevenMonth).toBeGreaterThan(60);
     expect(quickDeal(upside, full.annualMiles).breakevenMonth).toBe(full.breakevenMonth);
+  });
+
+  it("computes monthlyCashFlowDelta identical to simulate().trueDelta", () => {
+    const full = simulate(deal, current, 11604);
+    expect(monthlyCashFlowDelta(deal, current)).toBeCloseTo(full.trueDelta, 10);
   });
 });
 
@@ -111,5 +118,43 @@ describe("lookup cache", () => {
     await cache.get("3", async () => 3);
     expect(cache.has("1")).toBe(false);
     expect(cache.size).toBe(2);
+  });
+});
+
+describe("Cloudflare D1 saved deal serialization & password hashing", () => {
+  it("parses both JSON strings (D1 TEXT columns) and raw objects in parseDealRow", () => {
+    const built = buildDealRow({
+      customerName: "  Jane Doe  ",
+      customerPhone: " 555-0199 ",
+      notes: " Ready to buy ",
+      vehicle: SAMPLE_INVENTORY[0]!,
+      tradeCar: { vin: null, year: 2019, make: "Ford", model: "Escape", label: "2019 Ford Escape", miles: 68000 },
+      deal,
+      current,
+    });
+    const parsedFromStrings = parseDealRow({
+      id: "deal-1",
+      customer_name: built.customer_name,
+      customer_phone: built.customer_phone,
+      notes: built.notes,
+      proposed_stock: built.proposed_stock,
+      proposed_vehicle_json: JSON.stringify(built.proposed_vehicle_json),
+      trade_vehicle_json: JSON.stringify(built.trade_vehicle_json),
+      deal_structure_json: JSON.stringify(built.deal_structure_json),
+      updated_at: "2026-04-01T00:00:00.000Z",
+    });
+
+    expect(parsedFromStrings.customerName).toBe("Jane Doe");
+    expect(parsedFromStrings.customerPhone).toBe("555-0199");
+    expect(parsedFromStrings.deal).toEqual(deal);
+    expect(parsedFromStrings.current).toEqual(current);
+    expect(parsedFromStrings.vehicle?.stock).toBe(SAMPLE_INVENTORY[0]!.stock);
+  });
+
+  it("hashes and verifies passwords with Web Crypto PBKDF2", async () => {
+    const hash = await hashPassword("correct-horse-battery-staple");
+    expect(hash.startsWith("pbkdf2:")).toBe(true);
+    expect(await verifyPassword("correct-horse-battery-staple", hash)).toBe(true);
+    expect(await verifyPassword("wrong-password", hash)).toBe(false);
   });
 });

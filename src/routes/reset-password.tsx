@@ -6,15 +6,16 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { completePasswordReset } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Set a new password – Deal Desk" },
-      { name: "description", content: "Choose a new password for your Deal Desk account." },
-      { property: "og:title", content: "Set a new password – Deal Desk" },
-      { property: "og:description", content: "Choose a new password for your Deal Desk account." },
+      { title: "Set a new password – DealShift" },
+      { name: "description", content: "Choose a new password for your DealShift account." },
+      { property: "og:title", content: "Set a new password – DealShift" },
+      { property: "og:description", content: "Choose a new password for your DealShift account." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -25,32 +26,41 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
+  const { user, ready, setSession } = useAuth();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
   const [validLink, setValidLink] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const isRecovery = window.location.hash.includes("type=recovery") || window.location.search.includes("code=");
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || (isRecovery && session)) setValidLink(true);
-    });
-    void supabase.auth.getSession().then(({ data }) => {
-      setValidLink((prev) => prev || isRecovery || !!data.session);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    const params = new URLSearchParams(window.location.search);
+    const resetCode = params.get("code")?.trim() || null;
+    setCode(resetCode);
+    if (resetCode) {
+      setValidLink(true);
+    } else if (ready) {
+      setValidLink(!!user);
+    }
+  }, [ready, user]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const res = await completePasswordReset({ data: { code, password } });
+      if (res.error || !res.user || !res.token) {
+        toast.error(res.error ?? "Couldn't update password.");
+        if (res.error?.includes("expired")) setValidLink(false);
+        return;
+      }
+      setSession(res.user, res.token);
+      toast.success("Password updated");
+      void navigate({ to: "/", replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't update password.");
+    } finally {
+      setBusy(false);
     }
-    toast.success("Password updated");
-    void navigate({ to: "/", replace: true });
   };
 
   return (

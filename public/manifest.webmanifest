@@ -1,6 +1,6 @@
 {
-  "name": "Deal Desk – Ownership & Equity Twin",
-  "short_name": "Deal Desk",
+  "name": "DealShift – Ownership & Equity Twin",
+  "short_name": "DealShift",
   "description": "Compare a customer's current car with any stock unit: payment, fuel, maintenance and equity crossover.",
   "start_url": "/",
   "scope": "/",
