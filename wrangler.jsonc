@@ -11,6 +11,9 @@
   "observability": {
     "enabled": true
   },
+  "vars": {
+    "GOOGLE_CLIENT_ID": "260912636502-tm9of2thhi8icp110jn37f6s74eg7pvh.apps.googleusercontent.com"
+  },
   "d1_databases": [
     {
       "binding": "DB",
