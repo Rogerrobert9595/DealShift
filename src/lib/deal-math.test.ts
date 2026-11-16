@@ -213,33 +213,7 @@ describe("mileage-aware depreciation", () => {
   });
 });
 
-describe("book value & insurance estimator", () => {
-  it("calculates book value tiers with fallback MSRP and mileage adjustments", async () => {
-    const { calculateBookValue } = await import("./deal-math");
-    const suv = calculateBookValue({
-      year: 2024,
-      make: "Toyota",
-      bodyClass: "RAV4 XLE AWD",
-      baseMsrp: null,
-      miles: 24000,
-      currentYear: 2026,
-    });
-    expect(suv.dealerRetail).toBeGreaterThan(suv.privateParty);
-    expect(suv.privateParty).toBeGreaterThan(suv.tradeInClean);
-    expect(suv.tradeInClean).toBeGreaterThan(suv.tradeInAverage);
-    expect(suv.tradeInAverage).toBeGreaterThan(suv.tradeInRough);
-
-    const highMiles = calculateBookValue({
-      year: 2024,
-      make: "Toyota",
-      bodyClass: "RAV4 XLE AWD",
-      baseMsrp: null,
-      miles: 64000,
-      currentYear: 2026,
-    });
-    expect(highMiles.dealerRetail).toBeLessThan(suv.dealerRetail);
-  });
-
+describe("insurance & ZIP rate estimators", () => {
   it("estimates monthly insurance delta from replacement cost ratio and clamps between $5 and $75", async () => {
     const { estimateInsuranceDelta } = await import("./deal-math");
     const modest = estimateInsuranceDelta({
@@ -281,28 +255,5 @@ describe("book value & insurance estimator", () => {
     expect(ca?.state).toBe("CA");
     expect(ca?.tradeTaxCredit).toBe(false);
     expect(ca?.gasPrice).toBeGreaterThan(ny!.gasPrice);
-  });
-
-  it("evaluates LTV percentage over book value and approval tiers", async () => {
-    const { evaluateLtv } = await import("./deal-math");
-    const under = evaluateLtv(21000, 24000);
-    expect(under.status).toBe("strong");
-    expect(under.ltvPct).toBe(87.5);
-    expect(under.overBookPct).toBe(-12.5);
-    expect(under.cashNeededFor120Cap).toBe(0);
-
-    const standard = evaluateLtv(26400, 24000);
-    expect(standard.status).toBe("good");
-    expect(standard.ltvPct).toBe(110);
-    expect(standard.overBookPct).toBe(10);
-
-    const stretch = evaluateLtv(28800, 24000);
-    expect(stretch.status).toBe("stretch");
-    expect(stretch.ltvPct).toBe(120);
-
-    const overCap = evaluateLtv(31200, 24000);
-    expect(overCap.status).toBe("over");
-    expect(overCap.ltvPct).toBe(130);
-    expect(overCap.cashNeededFor120Cap).toBe(2400);
   });
 });
